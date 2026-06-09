@@ -636,3 +636,27 @@ If you want next upgrade, I can help you turn this into:
 * 🔄 Auto rollback on failure
 
 Just tell me 👍
+
+
+
+Step 3: Add Datadog Helm repo
+helm repo add datadog https://helm.datadoghq.com
+helm repo update
+🔹 Step 4: Install Datadog cleanly
+
+Replace YOUR_API_KEY:
+
+helm install datadog datadog/datadog \
+  --namespace datadog \
+  --create-namespace \
+  --set datadog.apiKey=YOUR_API_KEY \
+  --set datadog.site=datadoghq.com \
+  --set agents.enabled=true \
+  --set clusterAgent.enabled=true
+🔹 Step 5: Verify installation
+helm list -A | grep datadog
+kubectl get pods -n datadog
+kubectl get ds -n datadog
+🔹 Step 6: Get values (after install)
+helm get values datadog -n datadog
+🔹
