@@ -371,3 +371,268 @@ templates/argo-application.yml        → ArgoCD Application: auto-sync from Git
 templates/argo-rollouts-dashboard.yml → Argo Rollouts UI exposed via LoadBalancer port 3100
 Argo-Deployment.docx                  → Step-by-step ArgoCD install guide (kubectl commands)
 ==============================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Got it — you want a **clean, correct, end-to-end command sequence from scratch after git clone**, with no confusion, no extra side paths.
+
+I’ll give you the **exact working GitOps + EKS + ArgoCD + Argo Rollouts flow**.
+
+---
+
+# 🚀 FULL WORKING PROJECT COMMAND FLOW (FROM `git clone`)
+
+## 🟢 STEP 1 — Clone repo
+
+```bash
+git clone https://github.com/himalayat22/shine-app.git
+cd shine-app
+```
+
+---
+
+# ☸️ STEP 2 — Set kubeconfig (IMPORTANT)
+
+If cluster already exists:
+
+```bash
+aws eks update-kubeconfig --region ap-southeast-2 --name shine-cluster
+```
+
+Verify:
+
+```bash
+kubectl get nodes
+```
+
+---
+
+# 📦 STEP 3 — Create namespaces
+
+```bash
+kubectl create ns argocd
+kubectl create ns retail
+kubectl create ns argo-rollouts
+```
+
+---
+
+# 🚀 STEP 4 — Install ArgoCD
+
+```bash
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
+
+Wait:
+
+```bash
+kubectl get pods -n argocd
+```
+
+---
+
+# 🌐 STEP 5 — Expose ArgoCD
+
+```bash
+kubectl patch svc argocd-server -n argocd -p '{"spec":{"type":"LoadBalancer"}}'
+```
+
+Get URL:
+
+```bash
+kubectl get svc -n argocd
+```
+
+---
+
+# 🔑 STEP 6 — Get ArgoCD password
+
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+echo
+```
+
+Login:
+
+* username: admin
+* password: (above)
+
+---
+
+# ⚙️ STEP 7 — Install Argo Rollouts
+
+```bash
+kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
+```
+
+Check:
+
+```bash
+kubectl get pods -n argo-rollouts
+```
+
+---
+
+# 🐳 STEP 8 — Build & push Docker image
+
+```bash
+docker build -t <your-dockerhub-username>/shine-app-nodejs:latest .
+docker login
+docker push <your-dockerhub-username>/shine-app-nodejs:latest
+```
+
+---
+
+# ✏️ STEP 9 — FIX values.yaml (IMPORTANT)
+
+Edit:
+
+```bash
+nano Retail-chart/values.yaml
+```
+
+Set:
+
+```yaml
+image:
+  repository: <your-dockerhub-username>/shine-app-nodejs
+  tag: latest
+```
+
+---
+
+# ☸️ STEP 10 — Deploy ONLY via ArgoCD
+
+Apply Argo Application:
+
+```bash
+kubectl apply -f Retail-chart/templates/argo-application.yml
+```
+
+---
+
+# 🔁 STEP 11 — Verify ArgoCD App
+
+```bash
+kubectl get applications -n argocd
+```
+
+You should see:
+
+```
+tyagi-shine   Synced   Healthy
+```
+
+---
+
+# 📦 STEP 12 — Check workloads
+
+```bash
+kubectl get pods -n retail
+kubectl get svc -n retail
+kubectl get rollout -n retail
+```
+
+---
+
+# 🌐 STEP 13 — Get app URL
+
+```bash
+kubectl get svc -n retail
+```
+
+Look for:
+
+```
+userprofile-active-service  LoadBalancer  EXTERNAL-IP
+```
+
+Open in browser:
+
+```
+http://<EXTERNAL-IP>
+```
+
+---
+
+# ⚠️ STEP 14 — If ELB not opening (IMPORTANT FIX)
+
+If timeout happens:
+
+```bash
+kubectl describe svc userprofile-active-service -n retail
+```
+
+Check:
+
+* port
+* targetPort
+* selector
+
+Then restart rollout:
+
+```bash
+kubectl argo rollouts restart userprofile-rollout -n retail
+```
+
+---
+
+# 🧠 FINAL RULE (VERY IMPORTANT)
+
+From now on:
+
+### ✔ ONLY use Git:
+
+```text
+git → ArgoCD → Kubernetes
+```
+
+### ❌ NEVER:
+
+* kubectl edit deployments manually
+* install 2 Argo apps
+* mix Helm + Argo for same resource
+
+---
+
+# 🎯 RESULT YOU SHOULD GET
+
+* ArgoCD UI shows:
+
+  ```
+  tyagi-shine → Synced ✔ Healthy ✔
+  ```
+
+* Pods:
+
+  ```
+  Running ✔
+  ```
+
+* Service:
+
+  ```
+  LoadBalancer → working URL ✔
+  ```
+
+---
+
+If you want next upgrade, I can help you turn this into:
+
+* 🔵 True Blue-Green deployment UI switching
+* 🔐 HTTPS + domain (Route53)
+* 📊 Prometheus + Grafana monitoring
+* 🔄 Auto rollback on failure
+
+Just tell me 👍
