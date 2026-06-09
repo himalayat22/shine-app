@@ -70,12 +70,12 @@ Step 1: Install eksctl (if not installed)
 Step 2: Create EKS Cluster
   eksctl create cluster \
     --name shine-cluster \
-    --region us-east-1 \
+    --region ap-southeast-2 \
     --nodegroup-name shine-nodes \
-    --node-type t3.medium \
-    --nodes 2 \
-    --nodes-min 1 \
-    --nodes-max 3 \
+    --node-type t3.small \
+    --nodes 4 \
+    --nodes-min 3 \
+    --nodes-max 5 \
     --managed
 
 Step 3: Update kubeconfig (access cluster)
